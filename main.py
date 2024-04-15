@@ -17,7 +17,7 @@ star_img = pygame.image.load("star.png")
 
 
 class GameSprite:
-    def init(self, x, y, w, h, image):
+    def __init__(self, x, y, w, h, image):
         self.rect = pygame.Rect(x, y, w, h)
         image = pygame.transform.scale(image, (w, h))
         self.image = image
@@ -27,8 +27,8 @@ class GameSprite:
 
 
 class Pers(GameSprite):
-    def init(self, x, y, w, h, image, speed):
-        super().init(x, y, w, h, image)
+    def __init__(self, x, y, w, h, image, speed):
+        super().__init__(x, y, w, h, image)
         self.speed = speed
         self.clip = 5
 
@@ -44,15 +44,15 @@ class Pers(GameSprite):
     def shoot(self):
         if self.clip > 0:
         # fire_snd.play()
-            b = Star(self.rect.centerx-7, self.rect.y, 15, 20, star_img, 4)
+            b = Bullet(self.rect.centerx-7, self.rect.y, 15, 20, star_img, 4)
             self.clip -= 1
     def reload(self):
         if self.clip <= 0:
             self.clip = 5
 
 class Enemy(GameSprite):
-    def init(self, x, y, w, h, image, speed):
-        super().init(x, y, w, h, image)
+    def __init__(self, x, y, w, h, image, speed):
+        super().__init__(x, y, w, h, image)
         self.speed = speed
         # self.direction = direction
         # self.x2 = x2
@@ -68,17 +68,17 @@ class Enemy(GameSprite):
             self.rect.y = randint(-500, -self.rect.h)
             self.speed = randint(1, 3)
 
-stars = []
-class Star(GameSprite):
-    def init(self, x, y, w, h, image, speed):
-        super().init(x, y, w, h, image)
+bullets = []
+class Bullet(GameSprite):
+    def __init__(self, x, y, w, h, image, speed):
+        super().__init__(x, y, w, h, image)
         self.speed = speed
-        stars.append(self)
+        bullets.append(self)
     
     def move(self):
         self.rect.y -= self.speed
         if self.rect.y <= -20:
-            stars.remove(self)
+            bullets.remove(self)
     
 font1 = pygame.font.SysFont("Arial", 20)
 font2 = pygame.font.SysFont("Arial", 50)
@@ -89,15 +89,15 @@ window = pygame.display.set_mode((win_w, win_h))
 pygame.display.set_caption("Shooter 0.1")
 clock = pygame.time.Clock()
 
-background = pygame.image.load("forest.jpg")
+background = pygame.image.load("forest.png")
 background = pygame.transform.scale(background, (win_w, win_h))
 window.blit(background, (0, 0))
 
 
-hero = pygame.image.load("ninlab.jpg")
+hero = pygame.image.load("ninlab.png")
 hero = Pers(330, 400, 50, 60, star_img, 5)
 
-enemy_img = pygame.image.load("ninjar.jpg") 
+enemy_img = pygame.image.load("ninjar.png") 
 
 enemies = []
 for i in range(5):
@@ -130,9 +130,44 @@ while game:
                 finish = True
                 new_record(record, score)
                 game_over = font2.render("Game Over", True, (255, 0, 0))
-            for star in stars:
-                if star.rect.colliderect(enemy.rect):
+            for bullet in bullets:
+                if bullet.rect.colliderect(enemy.rect):
                     score += 1
                     # print(score)
                     enemy.rect.x, enemy.rect.y = randint(0, win_w-50), randint(-500, 0)
-                    star.remove(star)
+                    bullets.remove(bullet)
+
+        for bullet in bullets:
+            bullet.update()
+            bullet.move()
+        if lost >= 3:
+            finish = True
+            game_over = font2.render("Game Over", True, (255, 0, 0))
+            new_record(record, score)
+    else:
+        window.blit(game_over, (200,200))
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            game = False
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN and finish:
+            finish = False
+            lost = 0
+            score = 0
+            hero.rect.x, hero.rect.y = 300, 400
+            for enemy in enemies:
+                enemy.rect.x, enemy.rect.y = randint(0, win_w-50), randint(-500, 0)
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE and not finish:
+            hero.shoot()
+        elif event.type == pygame.KEYDOWN and event.key == pygame.K_e and not finish:
+            hero.reload()
+    propusk = font1.render("Пропущено: "+str(lost), True, (255, 255, 255))
+    window.blit(propusk, (10,10))
+    killed = font1.render("Вбито: "+str(score), True, (255, 255, 255))
+    window.blit(killed, (10,30))
+    clip_stat = font1.render("Зарядів: "+str(hero.clip), True, (255, 255, 255))
+    window.blit(clip_stat, (350,10))
+    if hero.clip <= 0:
+        window.blit(reload_alert, (300,30))
+    pygame.display.update()
+    clock.tick(FPS)
